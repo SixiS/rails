@@ -11,17 +11,30 @@ module Rails
       include Helpers::Editor
       include EnvironmentArgument
 
+      require_relative "credentials_command/conflicted_credentials"
       require_relative "credentials_command/diffing"
       include Diffing
 
       desc "edit", "Open the decrypted credentials in `$VISUAL` or `$EDITOR` for editing"
+      option :internalise_conflicts, type: :boolean, default: false,
+        desc: "Internalise git conflicts if the binary blob is conflicted."
       def edit
-        load_environment_config!
+        begin
+          load_environment_config!
+        rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::EncryptedConfiguration::InvalidContentError => e
+          raise e unless options[:internalise_conflicts]
+        end
+
         load_generators
 
         if environment_specified?
           @content_path = "config/credentials/#{environment}.yml.enc" unless config.overridden?(:content_path)
           @key_path = "config/credentials/#{environment}.key" unless config.overridden?(:key_path)
+        end
+
+        if options[:internalise_conflicts]
+          conflicted_credentials = ConflictedCredentials.new(content_path, key_path)
+          conflicted_credentials.internalise_conflicts if conflicted_credentials.conflicts?
         end
 
         ensure_encryption_key_has_been_added
