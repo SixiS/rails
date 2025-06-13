@@ -1,3 +1,7 @@
+*   Add `--internalise-conflicts` options to the `rails credentails edit` commans
+
+    *SixiS*
+
 *   Remove unnecessary `ruby-version` input from `ruby/setup-ruby`
 
     *TangRufus*
